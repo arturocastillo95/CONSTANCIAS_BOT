@@ -18,8 +18,8 @@ def correoSend(name, receiver_email, constanciaPath, constanciaName):
 	#Email data
 	smtp_server = "mail.elfiscalista.com"
 	port = 587  # For starttls
-	sender_email = "contacto@elfiscalista.com"
-	password = "991a2b3c4d5e99"
+	sender_email = "email@elfiscalista.com"
+	password = ""
 
 	msg = MIMEMultipart()
 	msg['From'] = sender_email
