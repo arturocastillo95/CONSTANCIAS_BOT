@@ -1,0 +1,8 @@
+﻿field_name,field_type,top_x,top_y,bottom_x,bottom_y,alignment,font_padding
+name,text,307,307,1766,420,center,0.21
+rfc,text,466,333,609,499,left,0.21
+course,text,128,586,1883,704,center,0.21
+area,text,502,932,1091,955,left,0.21
+dpc,text,1729,886,1784,919,left,0.21
+duration,text,1729,924,1784,957,left,0.21
+expositor,text,1203,1235,1804,1272,center,0.21
