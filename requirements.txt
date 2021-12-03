@@ -1,0 +1,10 @@
+Jinja2==3.0.3
+lxml
+MarkupSafe==2.0.1
+numpy
+olefile
+pandas==1.3.4
+Pillow
+python-dateutil
+pytz
+six
