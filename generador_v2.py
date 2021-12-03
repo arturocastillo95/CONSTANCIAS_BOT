@@ -9,6 +9,8 @@ from email.mime.text import MIMEText
 import pandas as pd
 import configparser
 import re
+import unicodedata
+
 
 from jinja2 import Template
 
@@ -32,6 +34,7 @@ RESULTS_PATH = Path("RESULTS/")
 
 #Email config variables
 EMAIL_SENDER = CONFIG_FILE['EMAIL']['Sender']
+EMAIL_USER = CONFIG_FILE['EMAIL']['User']
 EMAIL_PASSWORD = CONFIG_FILE['EMAIL']['Password']
 EMAIL_PORT = CONFIG_FILE['EMAIL']['Port']
 EMAIL_HOST = CONFIG_FILE['EMAIL']['Host']
@@ -129,9 +132,9 @@ def csv_to_dict(csv_path):
         dict_list.append(row.to_dict())
     return dict_list
 
-def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR, email_template=EMAIL_TEMPLATE_FILE, email_subject=EMAIL_SUBJECT, email_sender=EMAIL_SENDER, email_password=EMAIL_PASSWORD, email_port=EMAIL_PORT, email_host=EMAIL_HOST):
+def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR, email_template=EMAIL_TEMPLATE_FILE, email_sender=EMAIL_SENDER, email_user=EMAIL_USER ,email_password=EMAIL_PASSWORD, email_port=EMAIL_PORT, email_host=EMAIL_HOST):
     #Initiate variables
-    result_name = data['name'] + " - " + data['course'] + ".jpg"
+    result_name = format_string(data['name'] + " - " + data['course']) + ".jpg"
     result_image_path = result_path / result_name
 
     #Check if the template exists
@@ -152,6 +155,9 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
 
         match field_type:
             case 'text':
+                #If field is empty or is nan, skip it
+                if not field['field_name'] or pd.isna(data[field['field_name']]):
+                    continue
                 topX = int(field['topX'])
                 topY = int(field['topY'])
                 bottomX = int(field['bottomX'])
@@ -173,7 +179,10 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
     if data['email'] != '' and isinstance(data['email'], str) and re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
         reciever_email = data['email']
         body = mail_template_body(email_template, data)
-        send_email(reciever_email, email_subject, body, result_image_path ,email_sender, email_password, email_port, email_host)
+
+        #Extract title from the body html template
+        email_subject = body.split('<title>')[1].split('</title>')[0]
+        send_email(reciever_email, email_subject, body, result_image_path ,email_sender, email_user ,email_password, email_port, email_host)
         print("Sent email to " + reciever_email)
 
 def generate_certificates(csv_path, field_list):
@@ -182,7 +191,7 @@ def generate_certificates(csv_path, field_list):
     for dict in dict_list:
         generate_certificate(dict, field_list)
 
-def send_email(reciever, subject, body, attachment_path ,sender=EMAIL_SENDER, password=EMAIL_PASSWORD, port=EMAIL_PORT, host=EMAIL_HOST, email_body_template=EMAIL_TEMPLATE_PATH):
+def send_email(reciever, subject, body, attachment_path ,sender=EMAIL_SENDER, user=EMAIL_USER ,password=EMAIL_PASSWORD, port=EMAIL_PORT, host=EMAIL_HOST):
     #Initiate message variables
     msg = MIMEMultipart()
     msg['From'] = sender
@@ -200,8 +209,13 @@ def send_email(reciever, subject, body, attachment_path ,sender=EMAIL_SENDER, pa
     
     encoders.encode_base64(part)
 
-    #Leave only attachment filename without full path
+    #Leave only attachment filename without full path and remove spaces
     filename = os.path.basename(attachment_path)
+
+    #replace spaces with underscores
+    filename = filename.replace(" ", "_")
+    print(filename)
+
 
     part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
     msg.attach(part)
@@ -211,7 +225,7 @@ def send_email(reciever, subject, body, attachment_path ,sender=EMAIL_SENDER, pa
     server.ehlo()
     server.starttls()
     server.ehlo()
-    server.login(sender, password)
+    server.login(user, password)
     server.sendmail(sender, reciever, msg.as_string())
     server.close()
 
@@ -225,6 +239,23 @@ def mail_template_body(template_path, data):
 
     template = Template(template_body)
     return template.render(data)
+
+def strip_accents(text):
+    #Initiate variables
+    text = unicodedata.normalize('NFD', text).encode('ascii', 'ignore')
+    text = text.decode("utf-8")
+    return str(text)
+
+def format_string(string):
+    #Remove special characters
+    string = re.sub(r'[^\w\s]', '', string)
+    #Remove accents
+    string = strip_accents(string)
+    #Remove double spaces
+    string = re.sub(r'\s+', ' ', string)
+    #Remove spaces at the beginning and at the end
+    string = string.strip()
+    return string
 
 def main():
 
