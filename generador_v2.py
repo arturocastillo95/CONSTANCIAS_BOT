@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 from PIL import Image, ImageDraw, ImageFont
-import email, smtplib, ssl
+import smtplib
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
@@ -10,7 +10,6 @@ import pandas as pd
 import configparser
 import re
 import unicodedata
-
 
 from jinja2 import Template
 
@@ -22,15 +21,13 @@ CONFIG_FILE = configparser.ConfigParser()
 CONFIG_FILE.read(CONFIG_FILE_PATH)
 
 #Global variables
-FONT_FOLDER = Path("FONTS/")
-FONT_PATH = str(FONT_FOLDER / "Roboto-Bold.ttf")
-
-#Some fonts have padding on top, I use this to remove the top padding 
+FONT_FOLDER = Path(CONFIG_FILE['FONT']['Font_Folder'])
+FONT_PATH = str(FONT_FOLDER / CONFIG_FILE['FONT']['Font_Name'])
 FONT_COLOR = (64, 64, 63)
 
-TEMPLATE_PATH = Path("TEMPLATES/")
-TEMPLATE_IMAGE_PATH = TEMPLATE_PATH / "constancia_2021.png"
-RESULTS_PATH = Path("RESULTS/")
+TEMPLATE_PATH = Path(CONFIG_FILE['TEMPLATE']['Template_Path'])
+TEMPLATE_IMAGE_PATH = TEMPLATE_PATH / CONFIG_FILE['TEMPLATE']['Template_Image_Name']
+RESULTS_PATH = Path(CONFIG_FILE['RESULTS']['Results_Folder'])
 
 #Email config variables
 EMAIL_SENDER = CONFIG_FILE['EMAIL']['Sender']
@@ -39,10 +36,8 @@ EMAIL_PASSWORD = CONFIG_FILE['EMAIL']['Password']
 EMAIL_PORT = CONFIG_FILE['EMAIL']['Port']
 EMAIL_HOST = CONFIG_FILE['EMAIL']['Host']
 EMAIL_TEMPLATE_NAME = CONFIG_FILE['EMAIL']['Template']
-EMAIL_SUBJECT = CONFIG_FILE['EMAIL']['Subject']
 EMAIL_TEMPLATE_PATH = Path("EMAIL_TEMPLATES/")
 EMAIL_TEMPLATE_FILE = EMAIL_TEMPLATE_PATH / EMAIL_TEMPLATE_NAME
-
 
 def text_sizer(txt, font, max_width, max_height, padding_percent=0):
     finalsize = 1
