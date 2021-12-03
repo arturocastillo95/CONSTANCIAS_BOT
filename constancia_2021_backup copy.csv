@@ -1,8 +1,0 @@
-﻿field_name,field_type,topX,topY,bottomX,bottomY,alignment,padding_percent
-name,text,307,307,1766,420,center,0.21
-rfc,text,350,466,609,499,left,0
-course,text,128,586,1883,704,center,0
-area,text,502,932,1091,955,left,0.21
-dpc,text,1729,886,1784,919,left,0
-duration,text,1729,924,1784,957,left,0
-expositor,text,1203,1235,1804,1272,center,0.21

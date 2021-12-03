@@ -1,7 +1,5 @@
 from pathlib import Path
-import shutil
 import os
-from typing import Match
 from PIL import Image, ImageDraw, ImageFont
 import email, smtplib, ssl
 from email import encoders
@@ -10,10 +8,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import pandas as pd
 import configparser
+import re
+
+from jinja2 import Template
+
 # import img2pdf
 
+#Read config file
 CONFIG_FILE_PATH = Path(__file__).parent / "config.ini"
-CONFIG_FILE = configparser.ConfigParser().read(CONFIG_FILE_PATH)
+CONFIG_FILE = configparser.ConfigParser()
+CONFIG_FILE.read(CONFIG_FILE_PATH)
 
 #Global variables
 FONT_FOLDER = Path("FONTS/")
@@ -26,11 +30,16 @@ TEMPLATE_PATH = Path("TEMPLATES/")
 TEMPLATE_IMAGE_PATH = TEMPLATE_PATH / "constancia_2021.png"
 RESULTS_PATH = Path("RESULTS/")
 
-#Email config file
-EMAIL_SENDER = CONFIG_FILE['EMAIL']['SENDER']
-EMAIL_PASSWORD = CONFIG_FILE['EMAIL']['PASSWORD']
-EMAIL_PORT = CONFIG_FILE['EMAIL']['PORT']
-EMAIL_HOST = CONFIG_FILE['EMAIL']['HOST'] 
+#Email config variables
+EMAIL_SENDER = CONFIG_FILE['EMAIL']['Sender']
+EMAIL_PASSWORD = CONFIG_FILE['EMAIL']['Password']
+EMAIL_PORT = CONFIG_FILE['EMAIL']['Port']
+EMAIL_HOST = CONFIG_FILE['EMAIL']['Host']
+EMAIL_TEMPLATE_NAME = CONFIG_FILE['EMAIL']['Template']
+EMAIL_SUBJECT = CONFIG_FILE['EMAIL']['Subject']
+EMAIL_TEMPLATE_PATH = Path("EMAIL_TEMPLATES/")
+EMAIL_TEMPLATE_FILE = EMAIL_TEMPLATE_PATH / EMAIL_TEMPLATE_NAME
+
 
 def text_sizer(txt, font, max_width, max_height, padding_percent=0):
     finalsize = 1
@@ -120,7 +129,7 @@ def csv_to_dict(csv_path):
         dict_list.append(row.to_dict())
     return dict_list
 
-def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR):
+def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR, email_template=EMAIL_TEMPLATE_FILE, email_subject=EMAIL_SUBJECT, email_sender=EMAIL_SENDER, email_password=EMAIL_PASSWORD, email_port=EMAIL_PORT, email_host=EMAIL_HOST):
     #Initiate variables
     result_name = data['name'] + " - " + data['course'] + ".jpg"
     result_image_path = result_path / result_name
@@ -160,19 +169,65 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
     image.convert('RGB').save(result_image_path, 'JPEG')
     print("Generated certificate for " + result_name)
 
+    #check if email is not empty and if it is a string and if email is valid
+    if data['email'] != '' and isinstance(data['email'], str) and re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
+        reciever_email = data['email']
+        body = mail_template_body(email_template, data)
+        send_email(reciever_email, email_subject, body, result_image_path ,email_sender, email_password, email_port, email_host)
+        print("Sent email to " + reciever_email)
+
 def generate_certificates(csv_path, field_list):
     dict_list = csv_to_dict(csv_path)
 
     for dict in dict_list:
         generate_certificate(dict, field_list)
 
-def send_email(reciever, subject, body, attachment_path, sender=EMAIL_SENDER, password=EMAIL_PASSWORD, port=EMAIL_PORT, host=EMAIL_HOST):
-    #Initiate variables
+def send_email(reciever, subject, body, attachment_path ,sender=EMAIL_SENDER, password=EMAIL_PASSWORD, port=EMAIL_PORT, host=EMAIL_HOST, email_body_template=EMAIL_TEMPLATE_PATH):
+    #Initiate message variables
     msg = MIMEMultipart()
     msg['From'] = sender
+    msg['To'] = reciever
+    msg['Subject'] = subject
+    msg['Bcc'] = sender
 
+    #Initiate body
+    msg.attach(MIMEText(body, 'html'))
+
+    #File attachment
+    with open(attachment_path, 'rb') as f:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(f.read())
+    
+    encoders.encode_base64(part)
+
+    #Leave only attachment filename without full path
+    filename = os.path.basename(attachment_path)
+
+    part.add_header('Content-Disposition', "attachment; filename= %s" % filename)
+    msg.attach(part)
+
+    #Initiate email server
+    server = smtplib.SMTP(host, port)
+    server.ehlo()
+    server.starttls()
+    server.ehlo()
+    server.login(sender, password)
+    server.sendmail(sender, reciever, msg.as_string())
+    server.close()
+
+def mail_template_body(template_path, data):
+    #Initiate variables
+    template_body = ""
+
+    #Open the template file
+    with open(template_path, 'r') as template_file:
+        template_body = template_file.read()
+
+    template = Template(template_body)
+    return template.render(data)
 
 def main():
+
     #Generate certificates
     data_csv = input("Enter the path to the csv file: ")
 
