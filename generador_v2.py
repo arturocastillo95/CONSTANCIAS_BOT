@@ -9,19 +9,28 @@ from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import pandas as pd
+import configparser
 # import img2pdf
+
+CONFIG_FILE_PATH = Path(__file__).parent / "config.ini"
+CONFIG_FILE = configparser.ConfigParser().read(CONFIG_FILE_PATH)
 
 #Global variables
 FONT_FOLDER = Path("FONTS/")
 FONT_PATH = str(FONT_FOLDER / "Roboto-Bold.ttf")
 
 #Some fonts have padding on top, I use this to remove the top padding 
-FONT_PADDING_PERCENT = 0.21
 FONT_COLOR = (64, 64, 63)
 
 TEMPLATE_PATH = Path("TEMPLATES/")
+TEMPLATE_IMAGE_PATH = TEMPLATE_PATH / "constancia_2021.png"
 RESULTS_PATH = Path("RESULTS/")
 
+#Email config file
+EMAIL_SENDER = CONFIG_FILE['EMAIL']['SENDER']
+EMAIL_PASSWORD = CONFIG_FILE['EMAIL']['PASSWORD']
+EMAIL_PORT = CONFIG_FILE['EMAIL']['PORT']
+EMAIL_HOST = CONFIG_FILE['EMAIL']['HOST'] 
 
 def text_sizer(txt, font, max_width, max_height, padding_percent=0):
     finalsize = 1
@@ -111,9 +120,61 @@ def csv_to_dict(csv_path):
         dict_list.append(row.to_dict())
     return dict_list
 
-def main():
-    example_data = {'name': 'Juanito Perez', 'rfc': 'PEPE123456789', 'course': 'Ingenieria en Sistemas', 'area': 'Sistemas', 'dpc':'5', 'duration': '1', 'expositor': 'Juanito Perez'}
+def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR):
+    #Initiate variables
+    result_name = data['name'] + " - " + data['course'] + ".jpg"
+    result_image_path = result_path / result_name
 
+    #Check if the template exists
+    if not os.path.exists(template_image_path):
+        print("Template not found")
+        return
+
+    #Check if the result folder exists
+    if not os.path.exists(result_path):
+        os.mkdir(result_path)
+
+    #Initiate image
+    image = Image.open(template_image_path)
+
+    #For each field on field_list, add the text to the image
+    for field in field_list:
+        field_type = field['field_type']
+
+        match field_type:
+            case 'text':
+                topX = int(field['topX'])
+                topY = int(field['topY'])
+                bottomX = int(field['bottomX'])
+                bottomY = int(field['bottomY'])
+                padding_percent = float(field['padding_percent'])
+                alignment = field['alignment']
+
+                text = str(data[field['field_name']])
+
+                image = add_text_overlay(image, text, font_path, font_color, alignment, topX, topY, bottomX, bottomY, padding_percent)
+            case _:
+                pass
+
+    #Save the image as jpeg
+    image.convert('RGB').save(result_image_path, 'JPEG')
+    print("Generated certificate for " + result_name)
+
+def generate_certificates(csv_path, field_list):
+    dict_list = csv_to_dict(csv_path)
+
+    for dict in dict_list:
+        generate_certificate(dict, field_list)
+
+def send_email(reciever, subject, body, attachment_path, sender=EMAIL_SENDER, password=EMAIL_PASSWORD, port=EMAIL_PORT, host=EMAIL_HOST):
+    #Initiate variables
+    msg = MIMEMultipart()
+    msg['From'] = sender
+
+
+def main():
+    #Generate certificates
+    data_csv = input("Enter the path to the csv file: ")
 
     TEMPLATE_IMAGE = TEMPLATE_PATH / "constancia_2021.png"
     TEMPLATE_SETTINGS = TEMPLATE_PATH / (TEMPLATE_IMAGE.name.split(".")[0] + ".csv")
@@ -121,33 +182,8 @@ def main():
     #Getting the settings from the csv
     fields = csv_to_dict(TEMPLATE_SETTINGS)
 
-    #Duplicating the template image
-    new_file_path = RESULTS_PATH / (example_data['name'] + ' - ' + example_data['course'] + ".jpg")
-
-    image = Image.open(TEMPLATE_IMAGE)
-
-    #Iterate over the settings
-    for field in fields:
-        #Getting the coordinates
-        topX = int(field['topX'])
-        topY = int(field['topY'])
-        bottomX = int(field['bottomX'])
-        bottomY = int(field['bottomY'])
-
-        #Getting the alignment
-        alignment = field['alignment']
-
-        #Getting the padding
-        padding_percent = float(field['padding_percent'])
-
-        #Getting the text
-        text = example_data[field['field_name']]
-
-        #Adding the text to the image
-        image = add_text_overlay(image, text, FONT_PATH, FONT_COLOR, alignment, topX, topY, bottomX, bottomY, padding_percent)
-    
-    #save the image as a jpg
-    image.convert('RGB').save(new_file_path)
+    #Generate the certificates
+    generate_certificates(data_csv, fields)
 
 if __name__ == "__main__":
     main()
