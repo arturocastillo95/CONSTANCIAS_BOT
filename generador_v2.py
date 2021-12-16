@@ -27,6 +27,7 @@ FONT_COLOR = (64, 64, 63)
 
 TEMPLATE_PATH = Path(CONFIG_FILE['TEMPLATE']['Template_Folder'])
 TEMPLATE_IMAGE_PATH = TEMPLATE_PATH / CONFIG_FILE['TEMPLATE']['Template_Image_Name']
+TEMPLATE_SETTINGS = TEMPLATE_PATH / CONFIG_FILE['TEMPLATE']['Template_Settings_File']
 RESULTS_PATH = Path(CONFIG_FILE['RESULTS']['Results_Folder'])
 
 #Email config variables
@@ -254,11 +255,10 @@ def format_string(string):
 
 def main():
 
+    print(TEMPLATE_SETTINGS)
+
     #Generate certificates
     data_csv = input("Enter the path to the csv file: ")
-
-    TEMPLATE_IMAGE = TEMPLATE_PATH / "constancia_2021.png"
-    TEMPLATE_SETTINGS = TEMPLATE_PATH / (TEMPLATE_IMAGE.name.split(".")[0] + ".csv")
 
     #Getting the settings from the csv
     fields = csv_to_dict(TEMPLATE_SETTINGS)
