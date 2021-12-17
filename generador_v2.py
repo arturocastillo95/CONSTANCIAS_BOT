@@ -30,6 +30,8 @@ TEMPLATE_IMAGE_PATH = TEMPLATE_PATH / CONFIG_FILE['TEMPLATE']['Template_Image_Na
 TEMPLATE_SETTINGS = TEMPLATE_PATH / CONFIG_FILE['TEMPLATE']['Template_Settings_File']
 RESULTS_PATH = Path(CONFIG_FILE['RESULTS']['Results_Folder'])
 
+IMAGES_PATH = Path(CONFIG_FILE['IMAGES']['Images_Folder'])
+
 #Email config variables
 EMAIL_SENDER = CONFIG_FILE['EMAIL']['Sender']
 EMAIL_USER = CONFIG_FILE['EMAIL']['User']
@@ -93,30 +95,35 @@ def add_image_overlay(image, image_overlay_path, alignment, topX, topY, bottomX,
     #Initiate image
     draw = ImageDraw.Draw(image)
 
-    #Getting the image
+    #Getting the overlay image
     img = Image.open(image_overlay_path)
 
     #Getting the size of the image
     img_width, img_height = img.size
 
+    #Resizing the overlay image to fit bounds width while keeping the aspect ratio
+    adjusted_img_height = int(bottomY - topY)
+    adjusted_img_width = int((adjusted_img_height * img_width) / img_height)
+    img = img.resize((adjusted_img_width, adjusted_img_height))
+
     #For X we get the true width of the image -> img_width
-    x_position = topX + ((bottomX - topX) - img_width)/2
+    x_position = topX + ((bottomX - topX) - adjusted_img_width)/2
 
     #For Y we get the true height of the image -> img_height
-    y_position = topY + ((bottomY - topY) - img_height)/2
+    y_position = topY + ((bottomY - topY) - adjusted_img_height)/2
 
     #Adding the image to the image
     match alignment:
         case 'left':
-            draw.bitmap((x_position, y_position), img, fill=(255, 255, 255))
+            draw.bitmap((x_position, y_position), img)
             return image
 
         case 'center':
-            draw.bitmap((x_position, y_position), img, fill=(255, 255, 255))
+            draw.bitmap((x_position, y_position), img, fill=(46, 62, 158))
             return image
 
         case 'right':
-            draw.bitmap((x_position, y_position), img, fill=(255, 255, 255))
+            draw.bitmap((x_position, y_position), img)
             return image
 
     return image
@@ -128,7 +135,7 @@ def csv_to_dict(csv_path):
         dict_list.append(row.to_dict())
     return dict_list
 
-def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR, email_template=EMAIL_TEMPLATE_FILE, email_sender=EMAIL_SENDER, email_user=EMAIL_USER ,email_password=EMAIL_PASSWORD, email_port=EMAIL_PORT, email_host=EMAIL_HOST):
+def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PATH, images_path=IMAGES_PATH ,result_path=RESULTS_PATH, font_path=FONT_PATH, font_color=FONT_COLOR, email_template=EMAIL_TEMPLATE_FILE, email_sender=EMAIL_SENDER, email_user=EMAIL_USER ,email_password=EMAIL_PASSWORD, email_port=EMAIL_PORT, email_host=EMAIL_HOST):
     #Initiate variables
     result_name = format_string(data['name'] + " - " + data['course']) + ".jpg"
     result_image_path = result_path / result_name
@@ -164,12 +171,25 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
                 text = str(data[field['field_name']])
 
                 image = add_text_overlay(image, text, font_path, font_color, alignment, topX, topY, bottomX, bottomY, padding_percent)
+            case 'image':
+                #If field is empty or is nan, skip it
+                if pd.isna(data[field['field_name']]):
+                    continue
+                topX = int(field['topX'])
+                topY = int(field['topY'])
+                bottomX = int(field['bottomX'])
+                bottomY = int(field['bottomY'])
+                alignment = field['alignment']
+
+                image_path = images_path / data[field['field_name']]
+
+                image = add_image_overlay(image, image_path, alignment, topX, topY, bottomX, bottomY)
             case _:
                 pass
 
     #Save the image as jpeg
     image.convert('RGB').save(result_image_path, 'JPEG')
-    print("Generated certificate for " + result_name)
+    print("Se género una constancia para " + result_name)
 
     #check if email is not empty and if it is a string and if email is valid
     if data['email'] != '' and isinstance(data['email'], str) and re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
@@ -179,7 +199,7 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
         #Extract title from the body html template
         email_subject = body.split('<title>')[1].split('</title>')[0]
         send_email(reciever_email, email_subject, body, result_image_path ,email_sender, email_user ,email_password, email_port, email_host)
-        print("Sent email to " + reciever_email)
+        print("Se envío el correo a " + reciever_email)
 
 def generate_certificates(csv_path, field_list):
     dict_list = csv_to_dict(csv_path)
@@ -255,10 +275,8 @@ def format_string(string):
 
 def main():
 
-    print(TEMPLATE_SETTINGS)
-
     #Generate certificates
-    data_csv = input("Enter the path to the csv file: ")
+    data_csv = input("Ingresa el nombre del archivo CSV: ")
 
     #Getting the settings from the csv
     fields = csv_to_dict(TEMPLATE_SETTINGS)
