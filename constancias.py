@@ -4,6 +4,7 @@ from tkinter import ttk
 import tkinter.filedialog as filedialog
 import generador_v2 as gn
 from pathlib import Path
+from PIL import Image
 
 SIGNATURES_PATH = Path("FIRMAS/")
 COURSE_DB_PATH = Path("BASE_DE_DATOS_CURSOS.csv")
@@ -21,10 +22,28 @@ def abrir_archivo(window):
     else:
         messagebox.showinfo("Error", "No se ha seleccionado ningun archivo")
 
-def generar_individual_imagen(window, name, email, rfc, course, expositor, firma):
+#Function to match the course name with the course database and return the course data
+def get_course_data(course):
+    for course_data in COURSE_DB:
+        if course_data['course'] == course:
+            return course_data
+
+def generar_individual_imagen(window, name, email, rfc, course):
     #Generate the certificate
-    dict_data = {'name': name, 'email': email, 'rfc': rfc, 'course': course, 'expositor': expositor, 'expositor_firma': firma, 'dpc': '5', 'area': 'FISCAL', 'duration':'5',}
-    gn.generate_certificate(dict_data, gn.csv_to_dict(gn.TEMPLATE_SETTINGS))
+    course_data = get_course_data(course)
+
+    dict_data = {'name': name, 'email': email, 'rfc': rfc, 'course': course, 'expositor': course_data['expositor'], 'expositor_firma': course_data['expositor_firma'], 'dpc': course_data['dpc'], 'area': course_data['area'], 'duration': course_data['duration'],}
+    result = gn.generate_certificate(dict_data, gn.csv_to_dict(gn.TEMPLATE_SETTINGS))
+
+    #Open the generated certificate image file
+    img = Image.open(result['image_path'])
+    img.show()
+
+    #Message box to confirm the certificate creation and if email was sent
+    if result['email_sent']:
+        messagebox.showinfo("Constancia generada", "Constancia generada y enviada al correo electronico " + email)
+    else:
+        messagebox.showinfo("Constancia generada", "Constancia generada pero no se pudo enviar el correo electronico")
 
     #close window
     window.destroy()
@@ -40,8 +59,8 @@ def generar_individual():
 
     #Add grid spacers
     spacer_1 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=0, column=0)
-    spacer_2 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=15, column=2)
-    spacer_3 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=13, column=1)
+    spacer_2 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=11, column=2)
+    spacer_3 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=9, column=1)
 
     #Add name input field
     Label(window, text="Nombre del Alumno:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=1, column=1)
@@ -58,32 +77,22 @@ def generar_individual():
     rfc_alumno = StringVar()
     Entry(window, textvariable=rfc_alumno, width=30).grid(row=6, column=1)
 
-    #Add course input field
+    #Read course database and add course options
+    courses = []
+    for course in COURSE_DB:
+        courses.append(course['course'])
+
+    courses.sort()
+    courses.insert(0, "Selecciona un curso")
+    course_var = StringVar()
+    course_var.set(courses[0])
     Label(window, text="Curso:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=7, column=1)
-    curso_alumno = StringVar()
-    Entry(window, textvariable=curso_alumno, width=30).grid(row=8, column=1)
-
-    #Add expositor input field
-    Label(window, text="Expositor:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=9, column=1)
-    expositor_curso = StringVar()
-    Entry(window, textvariable=expositor_curso, width=30).grid(row=10, column=1)
-
-    #Add signature image input field
-    Label(window, text="Firma del Expositor:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=11, column=1)
-    #List of all images in signatures folder
-    firmas_images = [x for x in SIGNATURES_PATH.iterdir() if x.is_file()]
-    print(firmas_images)
-    firmas_images = [x for x in firmas_images if x.suffix == ".png"]
-    firmas_images = [str(x.name) for x in firmas_images]
-    #Add dropdown menu with firmas images
-    firma_expositor = StringVar()
-    firma_expositor.set(firmas_images[0])
-    firma_menu = ttk.Combobox(window, textvariable=firma_expositor, values=firmas_images, width=30)
-    firma_menu.grid(row=12, column=1)
+    course_menu = ttk.Combobox(window, textvariable=course_var, values=courses, width=30)
+    course_menu.grid(row=8, column=1)
 
     #Add generate button
-    generate_button = Button(window, text="Generar Constancia", command=lambda: generar_individual_imagen(window, nombre_alumno.get(), email_alumno.get(), rfc_alumno.get(), curso_alumno.get(), expositor_curso.get(), firma_expositor.get()), bg="#100f31", fg="white", font=("Arial", 12))
-    generate_button.grid(row=14, column=1)
+    generate_button = Button(window, text="Generar Constancia", command=lambda: generar_individual_imagen(window, nombre_alumno.get(), email_alumno.get(), rfc_alumno.get(), course_var.get()), bg="#100f31", fg="white", font=("Arial", 12))
+    generate_button.grid(row=10, column=1)
 
 def generar_multiple():
     #open a new window
