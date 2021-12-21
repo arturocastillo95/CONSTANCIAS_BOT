@@ -191,6 +191,8 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
     image.convert('RGB').save(result_image_path, 'JPEG')
     print("Se género una constancia para " + result_name)
 
+    email_sent = False
+
     #check if email is not empty and if it is a string and if email is valid
     if data['email'] != '' and isinstance(data['email'], str) and re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
         reciever_email = data['email']
@@ -199,7 +201,11 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
         #Extract title from the body html template
         email_subject = body.split('<title>')[1].split('</title>')[0]
         send_email(reciever_email, email_subject, body, result_image_path ,email_sender, email_user ,email_password, email_port, email_host)
+        email_sent = True
         print("Se envío el correo a " + reciever_email)
+    
+    return {'image_path': result_image_path, 'email_sent': email_sent} 
+    
 
 def generate_certificates(csv_path, field_list):
     dict_list = csv_to_dict(csv_path)
@@ -208,6 +214,9 @@ def generate_certificates(csv_path, field_list):
         generate_certificate(dict, field_list)
 
 def send_email(reciever, subject, body, attachment_path ,sender=EMAIL_SENDER, user=EMAIL_USER ,password=EMAIL_PASSWORD, port=EMAIL_PORT, host=EMAIL_HOST):
+    
+    reciever = reciever.strip()
+
     #Initiate message variables
     msg = MIMEMultipart()
     msg['From'] = sender
