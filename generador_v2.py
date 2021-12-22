@@ -194,7 +194,7 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
     email_sent = False
 
     #check if email is not empty and if it is a string and if email is valid
-    if data['email'] != '' and isinstance(data['email'], str) and re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
+    if 'email' in data and data['email'] != "" and isinstance(data['email'], str) and re.match(r"[^@]+@[^@]+\.[^@]+", data['email']):
         reciever_email = data['email']
         body = mail_template_body(email_template, data)
 

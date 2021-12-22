@@ -1,4 +1,5 @@
 from tkinter import *
+import tkinter as tk
 import tkinter.messagebox as messagebox
 from tkinter import ttk
 import tkinter.filedialog as filedialog
@@ -9,14 +10,37 @@ from PIL import Image
 SIGNATURES_PATH = Path("FIRMAS/")
 COURSE_DB_PATH = Path("BASE_DE_DATOS_CURSOS.csv")
 GUI_ELEMENTS = Path("GUI/")
+ICON = GUI_ELEMENTS / "favicon.icns"
+print(ICON)
 COURSE_DB = gn.csv_to_dict(COURSE_DB_PATH)
+TEMPLATE_SETTINGS = gn.csv_to_dict(gn.TEMPLATE_SETTINGS)
 
-def abrir_archivo(window):
+def abrir_archivo(window, progress_label, progress_bar):
     #open file anc center button
     archivo = filedialog.askopenfilename(initialdir = "/",title = "Selecciona el archivo",filetypes = (("Archivos CSV","*.csv"),))
+
     if archivo != "":
-        #Generate the certificates
-        gn.generate_certificates(archivo)
+        constancias = gn.csv_to_dict(archivo)
+
+        total_constancias = len(constancias)
+        current_progress = 0
+        
+        for constancia in constancias:
+            try:
+                course_data = get_course_data(constancia['course'])
+                dict_data = constancia | course_data
+                gn.generate_certificate(dict_data, TEMPLATE_SETTINGS)
+                current_progress += 1
+                progress_label.config(text="Procesando: " + str(current_progress) + "/" + str(total_constancias))
+                progress_percentage = (current_progress*100)/total_constancias
+                progress_bar['value'] = progress_percentage
+                root.update()
+
+            except:
+                print("Error al generar la constancia")
+
+        messagebox.showinfo("Proceso completado", "Se han generado " + str(current_progress) + " constancias")
+
         #close window
         window.destroy()
     else:
@@ -28,12 +52,17 @@ def get_course_data(course):
         if course_data['course'] == course:
             return course_data
 
-def generar_individual_imagen(window, name, email, rfc, course):
+def generar_individual(window, name, email, rfc, course):
+    
+    if course=="Selecciona un curso":
+        messagebox.showinfo("Error", "No se ha seleccionado ningun curso")
+        return
+
     #Generate the certificate
     course_data = get_course_data(course)
 
     dict_data = {'name': name, 'email': email, 'rfc': rfc, 'course': course, 'expositor': course_data['expositor'], 'expositor_firma': course_data['expositor_firma'], 'dpc': course_data['dpc'], 'area': course_data['area'], 'duration': course_data['duration'],}
-    result = gn.generate_certificate(dict_data, gn.csv_to_dict(gn.TEMPLATE_SETTINGS))
+    result = gn.generate_certificate(dict_data, TEMPLATE_SETTINGS)
 
     #Open the generated certificate image file
     img = Image.open(result['image_path'])
@@ -48,14 +77,13 @@ def generar_individual_imagen(window, name, email, rfc, course):
     #close window
     window.destroy()
 
-
-def generar_individual():
+def generar_individual_window():
     #open new window
     window = Toplevel(frame)
+    root.eval('tk::PlaceWindow %s center' % window.winfo_pathname(window.winfo_id()))
     window.title("Generar Constancia Individual")
     window.resizable(False,False)
     window.config(bg="#100f31")
-    window.iconbitmap("logo.ico")
 
     #Add grid spacers
     spacer_1 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=0, column=0)
@@ -91,44 +119,43 @@ def generar_individual():
     course_menu.grid(row=8, column=1)
 
     #Add generate button
-    generate_button = Button(window, text="Generar Constancia", command=lambda: generar_individual_imagen(window, nombre_alumno.get(), email_alumno.get(), rfc_alumno.get(), course_var.get()), bg="#100f31", fg="white", font=("Arial", 12))
+    generate_button = Button(window, text="Generar Constancia", command=lambda: generar_individual(window, nombre_alumno.get(), email_alumno.get(), rfc_alumno.get(), course_var.get()), bg="#100f31", fg="white", font=("Arial", 12))
     generate_button.grid(row=10, column=1)
 
 def generar_multiple():
     #open a new window
     window = Toplevel(frame)
+    root.eval('tk::PlaceWindow %s center' % window.winfo_pathname(window.winfo_id()))
     window.title("Generar Constancia")
     window.resizable(False,False)
     window.config(bg="#100f31")
     window.iconbitmap("logo.ico")
 
-    #Add open file button in the center with grid 
-    open_button = Button(window, text="Abrir archivo", command=lambda: abrir_archivo(window), bg="#100f31", fg="white", font=("Arial", 12))
-    open_button.grid(row=2, column=1)
-
     #Add progress bar
-    progress = ttk.Progressbar(window, orient="horizontal", length=300, mode="determinate")
-    progress.grid(row=4, column=1)
+    progress_bar = ttk.Progressbar(window, orient="horizontal", length=300, mode="determinate")
+    progress_bar.grid(row=4, column=1)
 
     #Add label
     progress_label = Label(window, text="Procesando: 0/0", bg="#100f31", fg="white", font=("Arial", 12))
     progress_label.grid(row=3, column=1)
 
+
+    #Add open file button in the center with grid 
+    open_button = Button(window, text="Abrir archivo", command=lambda: abrir_archivo(window, progress_label, progress_bar), bg="#100f31", fg="white", font=("Arial", 12))
+    open_button.grid(row=2, column=1)
+
     #Grid spacers
     spacer_1 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=1, column=0)
-    spacer_2 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=5, column=2)    
-    
-
-
-
-
+    spacer_2 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=5, column=2)     
 
 root = Tk()
+root.eval('tk::PlaceWindow . center')
 root.title("Constancias")
 root.geometry("500x250")
 root.resizable(False,False)
 root.config(bg="#ffffff")
-root.iconbitmap("logo.ico")
+# icon_image = tk.Image("photo", file=str(ICON))
+# root.tk.call('wm', 'iconphoto', root._w, icon_image)
 
 #Frame
 frame = Frame(root, bg="#100f31")
@@ -139,7 +166,7 @@ label_title = Label(frame, text="Generar Constancias", font=("Arial", 25), bg="#
 label_title.pack(pady=10)
 
 #Create 2 buttons and center them
-button_individual = Button(frame, text="Individual", command=generar_individual, bg="#ffffff", fg="#100f31", font=("Arial", 12), relief="flat", borderwidth=0)
+button_individual = Button(frame, text="Individual", command=generar_individual_window, bg="#ffffff", fg="#100f31", font=("Arial", 12), relief="flat", borderwidth=0)
 button_individual.pack(side="left", padx=10, pady=10)
 button_multiple = Button(frame, text="Multiple", command=generar_multiple, bg="#ffffff", fg="#100f31", font=("Arial", 12), relief="flat", borderwidth=0)
 button_multiple.pack(side="right", padx=10, pady=10)
