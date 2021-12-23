@@ -10,7 +10,7 @@ from PIL import Image
 SIGNATURES_PATH = Path("FIRMAS/")
 COURSE_DB_PATH = Path("BASE_DE_DATOS_CURSOS.csv")
 GUI_ELEMENTS = Path("GUI/")
-ICON = GUI_ELEMENTS / "favicon.icns"
+ICON = GUI_ELEMENTS / "favicon.ico"
 print(ICON)
 COURSE_DB = gn.csv_to_dict(COURSE_DB_PATH)
 TEMPLATE_SETTINGS = gn.csv_to_dict(gn.TEMPLATE_SETTINGS)
@@ -80,7 +80,8 @@ def generar_individual(window, name, email, rfc, course):
 def generar_individual_window():
     #open new window
     window = Toplevel(frame)
-    root.eval('tk::PlaceWindow %s center' % window.winfo_pathname(window.winfo_id()))
+    #center window
+    root.eval(f'tk::PlaceWindow {str(window)} center')
     window.title("Generar Constancia Individual")
     window.resizable(False,False)
     window.config(bg="#100f31")
@@ -125,11 +126,12 @@ def generar_individual_window():
 def generar_multiple():
     #open a new window
     window = Toplevel(frame)
-    root.eval('tk::PlaceWindow %s center' % window.winfo_pathname(window.winfo_id()))
+    #Center window
+    root.eval(f'tk::PlaceWindow {str(window)} center')
     window.title("Generar Constancia")
     window.resizable(False,False)
     window.config(bg="#100f31")
-    window.iconbitmap("logo.ico")
+    # window.iconbitmap("logo.ico")
 
     #Add progress bar
     progress_bar = ttk.Progressbar(window, orient="horizontal", length=300, mode="determinate")

@@ -206,7 +206,6 @@ def generate_certificate(data, field_list, template_image_path=TEMPLATE_IMAGE_PA
     
     return {'image_path': result_image_path, 'email_sent': email_sent} 
     
-
 def generate_certificates(csv_path, field_list):
     dict_list = csv_to_dict(csv_path)
 
@@ -259,10 +258,11 @@ def mail_template_body(template_path, data):
     template_body = ""
 
     #Open the template file
-    with open(template_path, 'r') as template_file:
+    with open(template_path, 'r', encoding='utf-8') as template_file:
         template_body = template_file.read()
 
     template = Template(template_body)
+    print(template.render(data))
     return template.render(data)
 
 def strip_accents(text):
