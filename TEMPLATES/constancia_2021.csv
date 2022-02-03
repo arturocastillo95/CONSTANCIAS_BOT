@@ -6,4 +6,5 @@ area,text,502,932,1091,955,left,0.21
 dpc,text,1729,886,1784,919,left,0
 duration,text,1729,924,1820,957,left,0
 expositor,text,1203,1235,1804,1272,center,0.21
-expositor_firma,image,1243,1080,1764,1225,center,
+expositor_firma,image,1243,1080,1764,1225,center,0
+date,text,756,1062,1246,1092,center,0

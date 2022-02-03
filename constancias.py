@@ -7,6 +7,10 @@ import generador_v2 as gn
 from pathlib import Path
 from PIL import Image
 
+from datetime import datetime
+from tkcalendar import Calendar, DateEntry
+import locale
+
 SIGNATURES_PATH = Path("FIRMAS/")
 COURSE_DB_PATH = Path("BASE_DE_DATOS_CURSOS.csv")
 GUI_ELEMENTS = Path("GUI/")
@@ -52,16 +56,22 @@ def get_course_data(course):
         if course_data['course'] == course:
             return course_data
 
-def generar_individual(window, name, email, rfc, course):
+def generar_individual(window, name, email, rfc, course, date):
     
     if course=="Selecciona un curso":
         messagebox.showinfo("Error", "No se ha seleccionado ningun curso")
         return
+    
+    #Date to spanish locale
+    locale.setlocale(locale.LC_ALL, 'es_ES.UTF-8')
+    print(date)
+    date = "San Luis Potosí, S.L.P. a " + date.strftime('%d %B %Y')
+
 
     #Generate the certificate
     course_data = get_course_data(course)
 
-    dict_data = {'name': name, 'email': email, 'rfc': rfc, 'course': course, 'expositor': course_data['expositor'], 'expositor_firma': course_data['expositor_firma'], 'dpc': course_data['dpc'], 'area': course_data['area'], 'duration': course_data['duration'],}
+    dict_data = {'name': name, 'email': email, 'rfc': rfc, 'course': course, 'expositor': course_data['expositor'], 'expositor_firma': course_data['expositor_firma'], 'dpc': course_data['dpc'], 'area': course_data['area'], 'duration': course_data['duration'], 'date': date}
     result = gn.generate_certificate(dict_data, TEMPLATE_SETTINGS)
 
     #Open the generated certificate image file
@@ -90,6 +100,7 @@ def generar_individual_window():
     spacer_1 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=0, column=0)
     spacer_2 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=11, column=2)
     spacer_3 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=9, column=1)
+    spacer_4 = Label(window, text="                 ", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=13, column=1)
 
     #Add name input field
     Label(window, text="Nombre del Alumno:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=1, column=1)
@@ -106,6 +117,14 @@ def generar_individual_window():
     rfc_alumno = StringVar()
     Entry(window, textvariable=rfc_alumno, width=30).grid(row=6, column=1)
 
+    #Get current date
+    current_date = datetime.now()
+
+    #Add date input field
+    Label(window, text="Fecha de la Constancia:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=7, column=1)
+    date_entry = DateEntry(window, width=30, background='darkblue', foreground='white', borderwidth=2, year=current_date.year, month=current_date.month, day=current_date.day)
+    date_entry.grid(row=8, column=1)
+
     #Read course database and add course options
     courses = []
     for course in COURSE_DB:
@@ -115,13 +134,13 @@ def generar_individual_window():
     courses.insert(0, "Selecciona un curso")
     course_var = StringVar()
     course_var.set(courses[0])
-    Label(window, text="Curso:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=7, column=1)
+    Label(window, text="Curso:", bg="#100f31", fg="white", font=("Arial", 12)).grid(row=9, column=1)
     course_menu = ttk.Combobox(window, textvariable=course_var, values=courses, width=30)
-    course_menu.grid(row=8, column=1)
+    course_menu.grid(row=10, column=1)
 
     #Add generate button
-    generate_button = Button(window, text="Generar Constancia", command=lambda: generar_individual(window, nombre_alumno.get(), email_alumno.get(), rfc_alumno.get(), course_var.get()), bg="#100f31", fg="white", font=("Arial", 12))
-    generate_button.grid(row=10, column=1)
+    generate_button = Button(window, text="Generar Constancia", command=lambda: generar_individual(window, nombre_alumno.get(), email_alumno.get(), rfc_alumno.get(), course_var.get(), date_entry.get_date()),bg="#100f31", fg="white", font=("Arial", 12))
+    generate_button.grid(row=12, column=1)
 
 def generar_multiple():
     #open a new window
