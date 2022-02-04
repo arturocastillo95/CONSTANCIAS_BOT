@@ -40,8 +40,9 @@ def abrir_archivo(window, progress_label, progress_bar):
                 progress_bar['value'] = progress_percentage
                 root.update()
 
-            except:
+            except Exception as e:
                 print("Error al generar la constancia")
+                print(e)
 
         messagebox.showinfo("Proceso completado", "Se han generado " + str(current_progress) + " constancias")
 
@@ -55,6 +56,7 @@ def get_course_data(course):
     for course_data in COURSE_DB:
         if course_data['course'] == course:
             return course_data
+    raise Exception("Curso " + course + " no encontrado en la base de datos " + str(COURSE_DB_PATH))
 
 def generar_individual(window, name, email, rfc, course, date):
     
